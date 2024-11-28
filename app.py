@@ -4,7 +4,14 @@ import plotly.graph_objects as go
 import pandas as pd
 import numpy as np
 import statsmodels.api as sm
+from statsmodels.tsa.arima.model import ARIMA
 from plotly.subplots import make_subplots
+
+import pandas as pd
+import numpy as np
+from statsmodels.tsa.holtwinters import ExponentialSmoothing
+import plotly.graph_objects as go
+import streamlit as st
 
 def calculate_elasticities_and_prices(df):
     models_by_productline = {}
@@ -71,7 +78,7 @@ def create_dashboard():
     st.title("📊 Elasticity Analysis and Optimal Prices Dashboard")
     
     try:
-        df = pd.read_csv('data.csv')
+        df = pd.read_csv('data_v2.csv')
         st.success("✅ Data loaded successfully")
     except Exception as e:
         st.error(f"Error loading data: {e}")
@@ -123,7 +130,7 @@ def create_dashboard():
         )
 
     # Tabs para visualizaciones
-    tab1, tab2, tab3 = st.tabs(["📈 Prices & Elasticities", "💰 Revenue Analysis", "📊 Detailed Data"])
+    tab1, tab2, tab3, tab4 = st.tabs(["📈 Prices & Elasticities", "💰 Revenue Analysis", "📊 Detailed Data", "🔮 Forecast"])
     
     with tab1:
         col1, col2 = st.columns(2)
@@ -238,6 +245,87 @@ def create_dashboard():
             detailed_df[col] = detailed_df[col].apply(lambda x: f"{x:,.0f}")
 
         st.dataframe(detailed_df, use_container_width=True)
+
+ # Sección Forecast en Streamlit
+    with tab4:
+        st.write("Forecast")
+        
+        # Permitir al usuario seleccionar el número de días para el pronóstico
+        forecast_days = st.number_input("Select number of days for forecast", min_value=1, max_value=365, value=30)
+        
+        # Calcular ingresos por fecha
+        df['orderDate'] = pd.to_datetime(df['orderDate'])
+        df['revenue'] = df['priceEach'] * df['quantityOrdered']
+        df_revenue = df.groupby('orderDate')['revenue'].sum()
+        
+        # Aplicar Holt-Winters (Triple Exponential Smoothing)
+        model = ExponentialSmoothing(
+            df_revenue, 
+            seasonal='add',  # Cambiar a 'mul' si se sospecha estacionalidad multiplicativa
+            seasonal_periods=7,  # Ajustar según la estacionalidad de los datos (e.g., semanal)
+            trend='add',  # Incluir tendencia aditiva
+        ).fit()
+        
+        # Generar el pronóstico
+        forecast = model.forecast(forecast_days)
+        
+        # Calcular residuos y desviación estándar
+        residuals = model.fittedvalues - df_revenue
+        std_residuals = np.std(residuals)
+
+        # Crear intervalos de confianza
+        lower_bound = forecast - 1.96 * std_residuals
+        upper_bound = forecast + 1.96 * std_residuals
+        
+        # Crear DataFrame para graficar
+        forecast_dates = pd.date_range(start=df_revenue.index[-1], periods=forecast_days + 1, freq='D')[1:]
+        forecast_df = pd.DataFrame({
+            "Forecast": forecast.values,
+            "Lower Bound": lower_bound.values,
+            "Upper Bound": upper_bound.values,
+            "Date": forecast_dates
+        })
+        
+        # Gráfico interactivo
+        fig_forecast = go.Figure()
+
+        # Agregar datos históricos
+        fig_forecast.add_trace(go.Scatter(
+            x=df_revenue.index,
+            y=df_revenue.values,
+            mode='lines',
+            name='Historical Data',
+            line=dict(color='blue')
+        ))
+        
+        # Agregar pronóstico
+        fig_forecast.add_trace(go.Scatter(
+            x=forecast_df['Date'],
+            y=forecast_df['Forecast'],
+            mode='lines',
+            name='Forecast',
+            line=dict(color='green')
+        ))
+        
+        # Agregar intervalo de confianza
+        fig_forecast.add_trace(go.Scatter(
+            x=pd.concat([forecast_df['Date'], forecast_df['Date'][::-1]]),
+            y=pd.concat([forecast_df['Upper Bound'], forecast_df['Lower Bound'][::-1]]),
+            fill='toself',
+            name='Confidence Interval',
+            fillcolor='rgba(0,100,80,0.2)',
+            line=dict(color='rgba(0,100,80,0)')
+        ))
+        
+        fig_forecast.update_layout(
+            title=f"Forecast and Historical Data ({forecast_days} days)",
+            xaxis_title="Date",
+            yaxis_title="Revenue",
+            height=500
+        )
+        
+        st.plotly_chart(fig_forecast, use_container_width=True)
+
 
     # Recomendaciones
     st.markdown("### 💡 Strategic Recommendations")
