@@ -5,7 +5,7 @@ import pandas as pd
 import numpy as np
 import statsmodels.api as sm
 from plotly.subplots import make_subplots
-
+#hola
 def calculate_elasticities_and_prices(df):
     models_by_productline = {}
     elasticities_by_productline = {}
