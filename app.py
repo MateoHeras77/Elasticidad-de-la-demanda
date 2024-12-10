@@ -348,21 +348,21 @@ def create_dashboard():
         with col2:
             if elasticity < -1:
                 st.markdown(f"""
-                    - Elasticity: {elasticity:.2f} (High price sensitivity)
+                    - Elasticity: {elasticity:.2f} (High price sensitivity) Null hypothesis: Beta 1 = 0; Alternative hypothesis: Beta 1 ≠ 0.
                     - Recommended price change: {var_pct:.1f}%
                     - Impact on revenue: ${var_ingreso:,.2f} ({var_ingreso_pct:.1f}%)
                     - Strategy: Reduce prices to increase sales
                 """)
             elif elasticity > 0:
                 st.markdown(f"""
-                    - Elasticity: {elasticity:.2f} (Luxury product)
+                    - Elasticity: {elasticity:.2f} (Luxury product) Null hypothesis: Beta 1 = 0; Alternative hypothesis: Beta 1 ≠ 0.
                     - Recommended price change: {var_pct:.1f}%
                     - Impact on revenue: ${var_ingreso:,.2f} ({var_ingreso_pct:.1f}%)
                     - Strategy: Increase prices and emphasize exclusivity
                 """)
             else:
                 st.markdown(f"""
-                    - Elasticity: {elasticity:.2f} (Inelastic demand)
+                    - Elasticity: {elasticity:.2f} (Inelastic demand)Null hypothesis: Beta 1 = 0; Alternative hypothesis: Beta 1 ≠ 0.
                     - Recommended price change: {var_pct:.1f}%
                     - Impact on revenue: ${var_ingreso:,.2f} ({var_ingreso_pct:.1f}%)
                     - Strategy: Moderate price adjustment
